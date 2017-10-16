@@ -20,20 +20,46 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
-@Mojo(name = "fxPackager", defaultPhase = LifecyclePhase.INSTALL)
+/**
+ * Compressing dir /lib and jar file from target directory
+ * @goal create-release
+ */
+@Mojo(name = "fxPackager", defaultPhase = LifecyclePhase.DEPLOY)  //todo: if I remove javadoc I get error, which should I keep?
 public class FxApplicationPackager extends AbstractMojo {
 
-    @Parameter(defaultValue = "${project.version}", readonly = true)
-    private String projectVerison;
+/*    @Parameter(defaultValue = "${project.version}", readonly = true)
+    private String projectVerison;*/ //todo: why those annotations ain't working?
 
-    @Parameter(defaultValue = "${project.build.directory}", readonly = true)
-    private File targetDirectory;
+    private List<String> libFiles;
 
     public void execute() throws MojoExecutionException {
+        libFiles = new ArrayList<>();
+
+        MavenProject project = (MavenProject) getPluginContext().get("project");
+
+        String targetDirectory = project.getBuild().getDirectory();
+        generateFileList(new File(targetDirectory + "\\lib"));
+        generateFileList(new File(targetDirectory + "\\genark_v" + project.getVersion() + ".jar"));
+
+        //todo: zip those files!
+    }
+
+    private void generateFileList(File node){
+        if(node.isFile()){
+            getLog().info("generating zip entry: " + node.getAbsolutePath()); //only for testing, remove after
+            libFiles.add(node.getAbsolutePath());
+        }else if(node.isDirectory()){
+            String[] subNode = node.list();
+            for(String fileName: subNode){
+                generateFileList(new File(node, fileName));
+            }
+        }
 
     }
 }
